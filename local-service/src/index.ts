@@ -10,8 +10,8 @@ import {
   type PickerScope,
   type DocumentChoice,
   MAX_SELECTED_DOCUMENTS,
-} from '@obsidian-integrated/core';
-import { readRhenPolicy, isSealed } from '@obsidian-integrated/rhen-adapter';
+} from '../../core/src/index.js';
+import { readRhenPolicy, isSealed } from '../../rhen-adapter/src/index.js';
 import { digest, loadApproved, profileDigest } from './config.js';
 import { listMarkdown, readNoteFile, safePath } from './files.js';
 export * from './config.js';

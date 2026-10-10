@@ -1,0 +1,58 @@
+{
+  "name": "@knowledge-bridge/core",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Shared scope, retrieval, Rhen policy and capture engine for Knowledge Bridge",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markaschmidt/KnowledgeBridgeCore.git"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/core/src/index.d.ts",
+      "import": "./lib/core/src/index.js"
+    },
+    "./service": {
+      "types": "./lib/local-service/src/index.d.ts",
+      "import": "./lib/local-service/src/index.js"
+    },
+    "./rhen": {
+      "types": "./lib/rhen-adapter/src/index.d.ts",
+      "import": "./lib/rhen-adapter/src/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "check": "npm run build && npm run typecheck && npm test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package:core": "npm run build && node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && npm pack --pack-destination dist",
+    "demo": "tsx scripts/demo.ts",
+    "benchmark": "tsx scripts/benchmark.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.0",
+    "picomatch": "^4.0.3",
+    "yaml": "^2.8.1",
+    "mdast-util-from-markdown": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/picomatch": "^4.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}

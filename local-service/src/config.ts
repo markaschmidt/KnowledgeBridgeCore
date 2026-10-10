@@ -6,7 +6,7 @@ import {
   registrySchema,
   type Registry,
   type WorkspaceProfile,
-} from '@obsidian-integrated/core';
+} from '../../core/src/index.js';
 
 export const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 export const profileDigest = (profile: WorkspaceProfile) =>

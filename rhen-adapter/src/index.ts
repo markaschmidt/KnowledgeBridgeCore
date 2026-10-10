@@ -1,7 +1,7 @@
 import { readFile, realpath, lstat } from 'node:fs/promises';
 import { join, relative, isAbsolute } from 'node:path';
 import { createHash } from 'node:crypto';
-import type { RhenPolicyProvider } from '@obsidian-integrated/core';
+import type { RhenPolicyProvider } from '../../core/src/index.js';
 
 export function isSealed(text: string): boolean {
   return /^\uFEFF?(?:SLATE|RHEN)\d+:/.test(text.trimStart());

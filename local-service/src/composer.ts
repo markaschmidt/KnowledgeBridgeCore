@@ -3,7 +3,7 @@ import {
   MAX_SELECTED_DOCUMENTS,
   type DocumentChoice,
   type PickerScope,
-} from '@obsidian-integrated/core';
+} from '../../core/src/index.js';
 import type { KnowledgeService } from './index.js';
 import { z } from 'zod';
 

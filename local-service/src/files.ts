@@ -1,6 +1,6 @@
 import { lstat, realpath, open, readdir } from 'node:fs/promises';
 import { join, relative, isAbsolute } from 'node:path';
-import { notePath } from '@obsidian-integrated/core';
+import { notePath } from '../../core/src/index.js';
 
 export async function safePath(
   root: string,

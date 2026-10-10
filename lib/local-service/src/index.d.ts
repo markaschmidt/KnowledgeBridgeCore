@@ -4,6 +4,8 @@ import { loadApproved } from './config.js';
 export * from './config.js';
 export * from './files.js';
 export * from './composer.js';
+export * from './changes.js';
+export * from './transport.js';
 export declare const captureSchema: z.ZodObject<{
     vaultId: z.ZodString;
     requestId: z.ZodString;
@@ -14,15 +16,15 @@ export declare const captureSchema: z.ZodObject<{
 }, "strict", z.ZodTypeAny, {
     vaultId: string;
     title: string;
-    requestId: string;
     content: string;
+    requestId: string;
     source: "cursor" | "vscode" | "obsidian" | "mcp";
     sessionId?: string | undefined;
 }, {
     vaultId: string;
     title: string;
-    requestId: string;
     content: string;
+    requestId: string;
     source: "cursor" | "vscode" | "obsidian" | "mcp";
     sessionId?: string | undefined;
 }>;
@@ -41,6 +43,10 @@ export declare class KnowledgeService {
             exclude: string[];
             tagsAny: string[];
             captureFolder?: string | undefined;
+            write?: {
+                update: boolean;
+                delete: boolean;
+            } | undefined;
         }[];
         retrieval: {
             maxResults: number;

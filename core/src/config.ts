@@ -50,6 +50,8 @@ export const scopeSchema = z
     exclude: z.array(glob).max(30).default([]),
     tagsAny: z.array(z.string().min(1).max(100)).max(30).default([]),
     captureFolder: relativePath.optional(),
+    // Optional preserves hashes of previously approved, read/capture-only profiles.
+    write: z.object({ update: z.boolean(), delete: z.boolean() }).strict().optional(),
   })
   .strict();
 export const profileSchema = z

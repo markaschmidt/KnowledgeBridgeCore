@@ -26,6 +26,10 @@ export declare function loadApproved(registryPath: string, profilePath: string):
             exclude: string[];
             tagsAny: string[];
             captureFolder?: string | undefined;
+            write?: {
+                update: boolean;
+                delete: boolean;
+            } | undefined;
         }[];
         retrieval: {
             maxResults: number;
@@ -40,6 +44,10 @@ export declare function loadApproved(registryPath: string, profilePath: string):
             exclude: string[];
             tagsAny: string[];
             captureFolder?: string | undefined;
+            write?: {
+                update: boolean;
+                delete: boolean;
+            } | undefined;
         };
         vault: {
             name: string;

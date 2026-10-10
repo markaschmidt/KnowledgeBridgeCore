@@ -6,15 +6,35 @@ import {
 } from '../../core/src/index.js';
 import type { KnowledgeService } from './index.js';
 import { z } from 'zod';
+import {
+  prepareChange,
+  applyChange,
+  changeOperation,
+  type ChangePreview,
+  type ChangeResult,
+} from './changes.js';
+
+export const composerSeedSchema = z
+  .object({
+    operation: z.enum(['read', 'create', 'update', 'delete']).default('read'),
+    content: z.string().max(40000).optional(),
+    query: z.string().max(200).optional(),
+  })
+  .strict();
+export type ComposerSeed = z.input<typeof composerSeedSchema>;
 
 export const composerActionSchema = z
   .object({
-    action: z.enum(['browse', 'commit', 'close']),
+    action: z.enum(['browse', 'commit', 'close', 'load', 'preview', 'apply']),
     sessionId: z.string().uuid(),
     vaultId: z.string().min(1).max(80).optional(),
     query: z.string().max(200).default(''),
     offset: z.number().int().min(0).max(30000).default(0),
     paths: z.array(z.string().min(1).max(2000)).max(12).default([]),
+    operation: changeOperation.optional(),
+    path: z.string().min(1).max(1000).optional(),
+    content: z.string().max(40000).optional(),
+    reviewId: z.string().uuid().optional(),
   })
   .strict();
 export type ComposerInitial = Awaited<ReturnType<ComposerSessions['begin']>> & { query?: string };
@@ -27,6 +47,8 @@ interface Session {
   vaultId?: string;
   generation: number;
   offered: Map<string, DocumentChoice>;
+  preview?: ChangePreview & { reviewId: string };
+  applying?: Promise<ChangeResult>;
 }
 export const COMPOSER_PAGE_SIZE = 25;
 /** UI instance state is scoped to a random handle, never to the last active chat. */
@@ -36,12 +58,14 @@ export class ComposerSessions {
     private service: KnowledgeService,
     private now = Date.now,
   ) {}
-  async begin() {
+  async begin(seed: ComposerSeed = {}) {
+    const preset = composerSeedSchema.parse(seed);
     for (const [id, session] of this.sessions)
       if (session.expires <= this.now()) this.sessions.delete(id);
     if (this.sessions.size >= 20)
       throw new Error('Too many open pickers. Close one or wait 15 minutes.');
     const scope = await this.service.pickerScope();
+    const status = await this.service.status();
     const sessionId = randomUUID();
     this.sessions.set(sessionId, {
       scope,
@@ -52,8 +76,17 @@ export class ComposerSessions {
     return {
       sessionId,
       workspaceId: scope.workspaceId,
-      vaults: scope.vaults,
+      vaults: scope.vaults.map((v) => {
+        const config = status.scopes.find((s) => s.vaultId === v.id)!;
+        return {
+          ...v,
+          captureFolder: config.captureFolder,
+          write: config.write,
+          tagsAny: config.tagsAny,
+        };
+      }),
       maxDocuments: MAX_SELECTED_DOCUMENTS,
+      ...preset,
     };
   }
   private async session(id: string) {
@@ -71,6 +104,9 @@ export class ComposerSessions {
   }
   async browse(id: string, vaultId: string, query: string, offset: number) {
     const session = await this.session(id);
+    if (session.applying)
+      throw new Error('A change is being applied or has already completed. Reopen the builder.');
+    session.preview = undefined;
     if (!session.scope.vaults.some((v) => v.id === vaultId))
       throw new Error('Vault unavailable in this workspace');
     if (session.vaultId !== vaultId) {
@@ -117,13 +153,84 @@ export class ComposerSessions {
   close(id: string) {
     this.sessions.delete(id);
   }
+  async load(id: string, vaultId: string, path: string) {
+    const session = await this.session(id);
+    const choice = session.vaultId === vaultId ? session.offered.get(path) : undefined;
+    if (!choice) throw new Error('Choose a document offered by this picker');
+    const note = await this.service.read(vaultId, path);
+    if (note.truncated || note.revision !== choice.revision)
+      throw new Error('The note changed or is too large. Reopen it in Obsidian.');
+    await prepareChange(
+      this.service,
+      { operation: 'update', vaultId, path, content: note.text, expectedRevision: choice.revision },
+      session.scope.revision,
+    );
+    if (!this.sessions.has(id)) throw new Error('Picker closed');
+    return { content: note.text };
+  }
+  async preview(
+    id: string,
+    vaultId: string,
+    operation: 'create' | 'update' | 'delete',
+    path: string,
+    content?: string,
+  ) {
+    const session = await this.session(id);
+    if (session.applying)
+      throw new Error('A change is being applied or has already completed. Reopen the builder.');
+    session.preview = undefined;
+    const generation = ++session.generation;
+    const choice = session.vaultId === vaultId ? session.offered.get(path) : undefined;
+    if (operation !== 'create' && !choice)
+      throw new Error('Choose a document offered by this picker');
+    const result = await prepareChange(
+      this.service,
+      {
+        operation,
+        vaultId,
+        path,
+        ...(content !== undefined ? { content } : {}),
+        ...(choice && operation !== 'create' ? { expectedRevision: choice.revision } : {}),
+      },
+      session.scope.revision,
+    );
+    if (generation !== session.generation || !this.sessions.has(id))
+      throw new Error('Change review superseded');
+    session.preview = { ...result, reviewId: randomUUID() };
+    return session.preview;
+  }
+  async apply(id: string, reviewId: string) {
+    const session = await this.session(id);
+    if (!session.preview || session.preview.reviewId !== reviewId)
+      throw new Error('Review this exact change before applying it');
+    if (!session.applying) {
+      session.applying = applyChange(this.service, session.preview, reviewId).catch((error) => {
+        session.applying = undefined;
+        throw error;
+      });
+    }
+    return session.applying;
+  }
   async dispatch(input: unknown) {
-    const { action, sessionId, vaultId, query, offset, paths } = composerActionSchema.parse(input);
+    const { action, sessionId, vaultId, query, offset, paths, operation, path, content, reviewId } =
+      composerActionSchema.parse(input);
     if (action === 'close') {
       this.close(sessionId);
       return { closed: true };
     }
     if (!vaultId) throw new Error('Choose a vault first');
+    if (action === 'apply') {
+      if (!reviewId) throw new Error('Review the change first');
+      return this.apply(sessionId, reviewId);
+    }
+    if (action === 'load') {
+      if (!path) throw new Error('Choose a document');
+      return this.load(sessionId, vaultId, path);
+    }
+    if (action === 'preview') {
+      if (!path || !operation) throw new Error('Choose an operation and document');
+      return this.preview(sessionId, vaultId, operation, path, content);
+    }
     return action === 'browse'
       ? this.browse(sessionId, vaultId, query, offset)
       : this.commit(sessionId, vaultId, paths);

@@ -1,27 +1,54 @@
 import { type DocumentChoice } from '../../core/src/index.js';
 import type { KnowledgeService } from './index.js';
 import { z } from 'zod';
+import { type ChangePreview } from './changes.js';
+export declare const composerSeedSchema: z.ZodObject<{
+    operation: z.ZodDefault<z.ZodEnum<["read", "create", "update", "delete"]>>;
+    content: z.ZodOptional<z.ZodString>;
+    query: z.ZodOptional<z.ZodString>;
+}, "strict", z.ZodTypeAny, {
+    operation: "update" | "delete" | "read" | "create";
+    content?: string | undefined;
+    query?: string | undefined;
+}, {
+    operation?: "update" | "delete" | "read" | "create" | undefined;
+    content?: string | undefined;
+    query?: string | undefined;
+}>;
+export type ComposerSeed = z.input<typeof composerSeedSchema>;
 export declare const composerActionSchema: z.ZodObject<{
-    action: z.ZodEnum<["browse", "commit", "close"]>;
+    action: z.ZodEnum<["browse", "commit", "close", "load", "preview", "apply"]>;
     sessionId: z.ZodString;
     vaultId: z.ZodOptional<z.ZodString>;
     query: z.ZodDefault<z.ZodString>;
     offset: z.ZodDefault<z.ZodNumber>;
     paths: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    operation: z.ZodOptional<z.ZodEnum<["create", "update", "delete"]>>;
+    path: z.ZodOptional<z.ZodString>;
+    content: z.ZodOptional<z.ZodString>;
+    reviewId: z.ZodOptional<z.ZodString>;
 }, "strict", z.ZodTypeAny, {
-    action: "browse" | "commit" | "close";
-    sessionId: string;
+    action: "browse" | "commit" | "close" | "load" | "preview" | "apply";
     query: string;
+    sessionId: string;
     offset: number;
     paths: string[];
+    path?: string | undefined;
     vaultId?: string | undefined;
+    operation?: "update" | "delete" | "create" | undefined;
+    content?: string | undefined;
+    reviewId?: string | undefined;
 }, {
-    action: "browse" | "commit" | "close";
+    action: "browse" | "commit" | "close" | "load" | "preview" | "apply";
     sessionId: string;
+    path?: string | undefined;
     vaultId?: string | undefined;
+    operation?: "update" | "delete" | "create" | undefined;
+    content?: string | undefined;
     query?: string | undefined;
     offset?: number | undefined;
     paths?: string[] | undefined;
+    reviewId?: string | undefined;
 }>;
 export type ComposerInitial = Awaited<ReturnType<ComposerSessions['begin']>> & {
     query?: string;
@@ -35,10 +62,22 @@ export declare class ComposerSessions {
     private now;
     private sessions;
     constructor(service: KnowledgeService, now?: () => number);
-    begin(): Promise<{
+    begin(seed?: ComposerSeed): Promise<{
+        operation: "update" | "delete" | "read" | "create";
+        content?: string | undefined;
+        query?: string | undefined;
         sessionId: `${string}-${string}-${string}-${string}-${string}`;
         workspaceId: string;
-        vaults: import("../../core/src/selection.js").VaultChoice[];
+        vaults: {
+            captureFolder: string | undefined;
+            write: {
+                update: boolean;
+                delete: boolean;
+            } | undefined;
+            tagsAny: string[];
+            id: string;
+            name: string;
+        }[];
         maxDocuments: number;
     }>;
     private session;
@@ -67,6 +106,20 @@ export declare class ComposerSessions {
         }[];
     }>;
     close(id: string): void;
+    load(id: string, vaultId: string, path: string): Promise<{
+        content: string;
+    }>;
+    preview(id: string, vaultId: string, operation: 'create' | 'update' | 'delete', path: string, content?: string): Promise<ChangePreview & {
+        reviewId: string;
+    }>;
+    apply(id: string, reviewId: string): Promise<{
+        path: string;
+        vaultId: string;
+        status: "applied";
+        operation: "update" | "delete" | "create";
+        revision?: string | undefined;
+        recovery?: string | undefined;
+    }>;
     dispatch(input: unknown): Promise<{
         documents: DocumentChoice[];
         total: number;
@@ -89,6 +142,17 @@ export declare class ComposerSessions {
             totalCharacters: number;
             truncated: boolean;
         }[];
+    } | (ChangePreview & {
+        reviewId: string;
+    }) | {
+        path: string;
+        vaultId: string;
+        status: "applied";
+        operation: "update" | "delete" | "create";
+        revision?: string | undefined;
+        recovery?: string | undefined;
+    } | {
+        content: string;
     } | {
         closed: boolean;
     }>;

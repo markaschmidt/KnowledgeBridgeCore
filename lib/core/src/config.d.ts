@@ -7,18 +7,36 @@ export declare const scopeSchema: z.ZodObject<{
     exclude: z.ZodDefault<z.ZodArray<z.ZodEffects<z.ZodString, string, string>, "many">>;
     tagsAny: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     captureFolder: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
+    write: z.ZodOptional<z.ZodObject<{
+        update: z.ZodBoolean;
+        delete: z.ZodBoolean;
+    }, "strict", z.ZodTypeAny, {
+        update: boolean;
+        delete: boolean;
+    }, {
+        update: boolean;
+        delete: boolean;
+    }>>;
 }, "strict", z.ZodTypeAny, {
     vaultId: string;
     include: string[];
     exclude: string[];
     tagsAny: string[];
     captureFolder?: string | undefined;
+    write?: {
+        update: boolean;
+        delete: boolean;
+    } | undefined;
 }, {
     vaultId: string;
     include: string[];
     exclude?: string[] | undefined;
     tagsAny?: string[] | undefined;
     captureFolder?: string | undefined;
+    write?: {
+        update: boolean;
+        delete: boolean;
+    } | undefined;
 }>;
 export declare const profileSchema: z.ZodEffects<z.ZodObject<{
     version: z.ZodLiteral<1>;
@@ -30,18 +48,36 @@ export declare const profileSchema: z.ZodEffects<z.ZodObject<{
         exclude: z.ZodDefault<z.ZodArray<z.ZodEffects<z.ZodString, string, string>, "many">>;
         tagsAny: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
         captureFolder: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
+        write: z.ZodOptional<z.ZodObject<{
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, "strict", z.ZodTypeAny, {
+            update: boolean;
+            delete: boolean;
+        }, {
+            update: boolean;
+            delete: boolean;
+        }>>;
     }, "strict", z.ZodTypeAny, {
         vaultId: string;
         include: string[];
         exclude: string[];
         tagsAny: string[];
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }, {
         vaultId: string;
         include: string[];
         exclude?: string[] | undefined;
         tagsAny?: string[] | undefined;
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }>, "many">;
     retrieval: z.ZodDefault<z.ZodObject<{
         maxResults: z.ZodDefault<z.ZodNumber>;
@@ -66,6 +102,10 @@ export declare const profileSchema: z.ZodEffects<z.ZodObject<{
         exclude: string[];
         tagsAny: string[];
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }[];
     retrieval: {
         maxResults: number;
@@ -82,6 +122,10 @@ export declare const profileSchema: z.ZodEffects<z.ZodObject<{
         exclude?: string[] | undefined;
         tagsAny?: string[] | undefined;
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }[];
     retrieval?: {
         maxResults?: number | undefined;
@@ -98,6 +142,10 @@ export declare const profileSchema: z.ZodEffects<z.ZodObject<{
         exclude: string[];
         tagsAny: string[];
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }[];
     retrieval: {
         maxResults: number;
@@ -114,6 +162,10 @@ export declare const profileSchema: z.ZodEffects<z.ZodObject<{
         exclude?: string[] | undefined;
         tagsAny?: string[] | undefined;
         captureFolder?: string | undefined;
+        write?: {
+            update: boolean;
+            delete: boolean;
+        } | undefined;
     }[];
     retrieval?: {
         maxResults?: number | undefined;
